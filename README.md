@@ -48,9 +48,9 @@ http://127.0.0.1:8000/docs
 
 Abra outro terminal, entre na pasta do frontend e execute:
 
-cd frontend
-npm install
-npm run dev
+- cd frontend
+- npm install
+- npm run dev
 
 Acesse o sistema pelo navegador:
 
