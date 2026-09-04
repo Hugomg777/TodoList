@@ -20,10 +20,6 @@ NEXO é uma aplicação web de gerenciamento de tarefas desenvolvida com React e
 - Pydantic
 - pwdlib
 
-## Estrutura do projeto
-
-README.md:
-
 # Como rodar o projeto
 
 ## Backend
