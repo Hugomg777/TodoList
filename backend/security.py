@@ -8,9 +8,9 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from models import User
-from setting import Settings
+from backend.database import get_session
+from backend.models.models import User
+from backend.setting import Settings
 
 
 settings = Settings()

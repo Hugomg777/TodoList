@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import "./App.css"
 
 import Login from "./pages/Login"
 import Cadastro from "./pages/Cadastro"
 import Dashboard from "./pages/Dashboard"
+import MinhasTarefas from "./pages/MinhasTarefas"
 import NovaTarefa from "./pages/NovaTarefa"
 import EditarTarefa from "./pages/EditarTarefa"
 import DetalhesTarefa from "./pages/DetalhesTarefa"
@@ -17,6 +19,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/tarefas" element={<MinhasTarefas />} />
         <Route path="/tarefas/nova" element={<NovaTarefa />} />
         <Route path="/tarefas/:id/editar" element={<EditarTarefa />} />
         <Route path="/tarefas/:id" element={<DetalhesTarefa />} />

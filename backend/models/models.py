@@ -1,6 +1,6 @@
-from datetime import datetime
+from backend.database import Base
+from datetime import date, datetime
 from enum import Enum
-
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.orm import (
     Mapped,
@@ -8,9 +8,6 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
-
-from database import Base
-
 
 class TodoState(str, Enum):
     draft = "rascunho"
@@ -20,25 +17,20 @@ class TodoState(str, Enum):
     trash = "lixeira"
 
 
+class TodoPriority(str, Enum):
+    low = "baixa"
+    medium = "media"
+    high = "alta"
+
+
 @mapped_as_dataclass(Base.registry)
 class User:
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(
-        init=False,
-        primary_key=True
-    )
-
-    username: Mapped[str] = mapped_column(
-        unique=True
-    )
-
-    email: Mapped[str] = mapped_column(
-        unique=True
-    )
-
+    id: Mapped[int] = mapped_column(init=False, primary_key=True)
+    username: Mapped[str] = mapped_column(unique=True)
+    email: Mapped[str] = mapped_column(unique=True)
     hashed_password: Mapped[str]
-
     created_at: Mapped[datetime] = mapped_column(
         init=False,
         server_default=func.now()
@@ -56,22 +48,14 @@ class User:
 class Todo:
     __tablename__ = "todos"
 
-    id: Mapped[int] = mapped_column(
-        init=False,
-        primary_key=True
-    )
-
+    id: Mapped[int] = mapped_column(init=False, primary_key=True)
     title: Mapped[str]
-
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id")
-    )
-
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     description: Mapped[str | None] = None
-
-    state: Mapped[TodoState] = mapped_column(
-        default=TodoState.todo
-    )
+    category: Mapped[str | None] = None
+    due_date: Mapped[date | None] = None
+    state: Mapped[TodoState] = mapped_column(default=TodoState.todo)
+    priority: Mapped[TodoPriority] = mapped_column(default=TodoPriority.medium)
 
     user: Mapped[User] = relationship(
         init=False,

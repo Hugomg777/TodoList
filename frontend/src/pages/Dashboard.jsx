@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Sidebar from "../components/Sidebar"
 import Header from "../components/Header"
+import { getCurrentUser, getTodos } from "../services/api"
 
 function CheckIcon() {
   return (
@@ -50,6 +52,102 @@ function PlusIcon() {
 
 function Dashboard() {
   const navigate = useNavigate()
+  const [user, setUser] = useState(null)
+  const [tasks, setTasks] = useState([])
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token")
+
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      try {
+        const userData = await getCurrentUser()
+        setUser(userData)
+
+        const tasksData = await getTodos()
+        setTasks(tasksData)
+      } catch {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        navigate("/login")
+      }
+    }
+
+    loadDashboard()
+  }, [navigate])
+
+  const completedTasks = tasks.filter(
+    task => task.state === "concluído"
+  )
+
+  const doingTasks = tasks.filter(
+    task => task.state === "fazendo"
+  )
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const overdueTasks = tasks.filter(task => {
+    if (!task.due_date || task.state === "concluído") {
+      return false
+    }
+
+    const dueDate = new Date(`${task.due_date}T00:00:00`)
+    return dueDate < today
+  })
+
+  const todayTasks = tasks.filter(task => {
+    if (!task.due_date) {
+      return false
+    }
+
+    const dueDate = new Date(`${task.due_date}T00:00:00`)
+    return dueDate.getTime() === today.getTime()
+  })
+
+  const getPriorityLabel = priority => {
+    if (priority === "alta") return "Alta"
+    if (priority === "media") return "Média"
+    return "Baixa"
+  }
+
+  const getPriorityClass = priority => {
+    if (priority === "alta") return "priority-high"
+    if (priority === "media") return "priority-medium"
+    return "priority-low"
+  }
+
+  const formatDate = date => {
+    if (!date) {
+      return "Sem prazo"
+    }
+
+    const taskDate = new Date(`${date}T00:00:00`)
+
+    if (taskDate.getTime() === today.getTime()) {
+      return "Hoje"
+    }
+
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    if (taskDate.getTime() === tomorrow.getTime()) {
+      return "Amanhã"
+    }
+
+    return taskDate.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+    })
+  }
+
+  const recentTasks = tasks.slice(0, 4)
 
   return (
     <div className="dashboard-layout">
@@ -62,8 +160,14 @@ function Dashboard() {
           <section className="dashboard-welcome">
             <div>
               <p className="dashboard-eyebrow">VISÃO GERAL</p>
-              <h1>Olá, Usuário! 👋</h1>
-              <p>Veja como está sua produtividade hoje.</p>
+
+              <h1>
+                Olá, {user?.username || "Usuário"}! 👋
+              </h1>
+
+              <p>
+                Veja como está sua produtividade hoje.
+              </p>
             </div>
 
             <button
@@ -84,8 +188,8 @@ function Dashboard() {
 
               <div className="stat-info">
                 <span>Tarefas concluídas</span>
-                <strong>24</strong>
-                <small>+12% esta semana</small>
+                <strong>{completedTasks.length}</strong>
+                <small>Concluídas</small>
               </div>
             </article>
 
@@ -96,8 +200,8 @@ function Dashboard() {
 
               <div className="stat-info">
                 <span>Em andamento</span>
-                <strong>8</strong>
-                <small>3 para hoje</small>
+                <strong>{doingTasks.length}</strong>
+                <small>{todayTasks.length} para hoje</small>
               </div>
             </article>
 
@@ -108,7 +212,7 @@ function Dashboard() {
 
               <div className="stat-info">
                 <span>Em atraso</span>
-                <strong>3</strong>
+                <strong>{overdueTasks.length}</strong>
                 <small>Precisa de atenção</small>
               </div>
             </article>
@@ -131,73 +235,63 @@ function Dashboard() {
             </div>
 
             <div className="dashboard-task-list">
-              <article className="dashboard-task">
-                <div className="dashboard-task-check"></div>
+              {recentTasks.length === 0 ? (
+                <div className="dashboard-empty">
+                  <p>Você ainda não possui tarefas.</p>
 
-                <div className="dashboard-task-info">
-                  <h3>Finalizar documentação do projeto</h3>
-                  <span>Projeto Integrador</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/tarefas/nova")}
+                  >
+                    Criar primeira tarefa
+                  </button>
                 </div>
+              ) : (
+                recentTasks.map(task => (
+                  <article
+                    className="dashboard-task"
+                    key={task.id}
+                    onClick={() => navigate(`/tarefas/${task.id}`)}
+                  >
+                    <div
+                      className={`dashboard-task-check ${
+                        task.state === "concluído" ? "completed" : ""
+                      }`}
+                    >
+                      {task.state === "concluído" && (
+                        <CheckIcon />
+                      )}
+                    </div>
 
-                <span className="task-priority priority-high">
-                  Alta
-                </span>
+                    <div
+                      className={`dashboard-task-info ${
+                        task.state === "concluído"
+                          ? "completed-task"
+                          : ""
+                      }`}
+                    >
+                      <h3>{task.title}</h3>
+                      <span>
+                        {task.category || "Sem categoria"}
+                      </span>
+                    </div>
 
-                <span className="task-date">
-                  Hoje
-                </span>
-              </article>
+                    <span
+                      className={`task-priority ${getPriorityClass(
+                        task.priority
+                      )}`}
+                    >
+                      {getPriorityLabel(task.priority)}
+                    </span>
 
-              <article className="dashboard-task">
-                <div className="dashboard-task-check"></div>
-
-                <div className="dashboard-task-info">
-                  <h3>Revisar metodologia do TCC</h3>
-                  <span>TCC</span>
-                </div>
-
-                <span className="task-priority priority-medium">
-                  Média
-                </span>
-
-                <span className="task-date">
-                  Amanhã
-                </span>
-              </article>
-
-              <article className="dashboard-task">
-                <div className="dashboard-task-check"></div>
-
-                <div className="dashboard-task-info">
-                  <h3>Estudar para avaliação</h3>
-                  <span>Faculdade</span>
-                </div>
-
-                <span className="task-priority priority-low">
-                  Baixa
-                </span>
-
-                <span className="task-date">
-                  05 Set
-                </span>
-              </article>
-
-              <article className="dashboard-task">
-                <div className="dashboard-task-check completed"></div>
-
-                <div className="dashboard-task-info completed-task">
-                  <h3>Organizar arquivos do projeto</h3>
-                  <span>Projeto</span>
-                </div>
-
-                <span className="task-priority priority-low">
-                  Baixa
-                </span>
-
-                <span className="task-date">
-                  Concluída
-                </span>
-              </article>
+                    <span className="task-date">
+                      {task.state === "concluído"
+                        ? "Concluída"
+                        : formatDate(task.due_date)}
+                    </span>
+                  </article>
+                ))
+              )}
             </div>
           </section>
 
@@ -209,7 +303,13 @@ function Dashboard() {
                   <p>Tarefas concluídas nesta semana</p>
                 </div>
 
-                <span>+18%</span>
+                <span>
+                  {tasks.length > 0
+                    ? `${Math.round(
+                        (completedTasks.length / tasks.length) * 100
+                      )}%`
+                    : "0%"}
+                </span>
               </div>
 
               <div className="productivity-chart">
@@ -254,20 +354,64 @@ function Dashboard() {
               <div className="today-card-header">
                 <div>
                   <h2>Hoje</h2>
-                  <p>Quinta-feira, 4 de setembro</p>
+
+                  <p>
+                    {today.toLocaleDateString("pt-BR", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </p>
                 </div>
 
-                <strong>3 tarefas</strong>
+                <strong>
+                  {todayTasks.length}{" "}
+                  {todayTasks.length === 1
+                    ? "tarefa"
+                    : "tarefas"}
+                </strong>
               </div>
 
               <div className="today-progress">
                 <div className="today-progress-bar">
-                  <span></span>
+                  <span
+                    style={{
+                      width:
+                        todayTasks.length > 0
+                          ? `${
+                              (todayTasks.filter(
+                                task =>
+                                  task.state === "concluído"
+                              ).length /
+                                todayTasks.length) *
+                              100
+                            }%`
+                          : "0%",
+                    }}
+                  ></span>
                 </div>
 
                 <div className="today-progress-info">
-                  <span>1 de 3 concluídas</span>
-                  <strong>33%</strong>
+                  <span>
+                    {
+                      todayTasks.filter(
+                        task => task.state === "concluído"
+                      ).length
+                    }{" "}
+                    de {todayTasks.length} concluídas
+                  </span>
+
+                  <strong>
+                    {todayTasks.length > 0
+                      ? `${Math.round(
+                          (todayTasks.filter(
+                            task => task.state === "concluído"
+                          ).length /
+                            todayTasks.length) *
+                            100
+                        )}%`
+                      : "0%"}
+                  </strong>
                 </div>
               </div>
             </div>

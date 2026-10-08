@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import Sidebar from "../components/Sidebar"
 import Header from "../components/Header"
+import { getTodo, updateTodo, deleteTodo } from "../services/api"
 
 function ArrowLeftIcon() {
   return (
@@ -69,6 +71,164 @@ function DetalhesTarefa() {
   const navigate = useNavigate()
   const { id } = useParams()
 
+  const [task, setTask] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    async function loadTask() {
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token")
+
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      try {
+        const data = await getTodo(id)
+        setTask(data)
+      } catch (err) {
+        if (err.message === "Could not validate credentials") {
+          localStorage.removeItem("access_token")
+          localStorage.removeItem("token")
+          navigate("/login")
+          return
+        }
+
+        setError(
+          err.message || "Não foi possível carregar a tarefa."
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTask()
+  }, [id, navigate])
+
+  async function handleComplete() {
+    if (!task) {
+      return
+    }
+
+    try {
+      const updatedTask = await updateTodo(id, {
+        state: "concluído",
+      })
+
+      setTask(updatedTask)
+    } catch (err) {
+      if (err.message === "Could not validate credentials") {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        navigate("/login")
+      }
+    }
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir esta tarefa?"
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token")
+
+    if (!token) {
+      navigate("/login")
+      return
+    }
+
+    try {
+      await deleteTodo(id)
+      navigate("/dashboard")
+    } catch (err) {
+      if (err.message === "Could not validate credentials") {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        navigate("/login")
+      }
+    }
+  }
+
+  const getPriorityLabel = priority => {
+    if (priority === "alta") return "Alta"
+    if (priority === "media") return "Média"
+    return "Baixa"
+  }
+
+  const getStateLabel = state => {
+    if (state === "concluído") return "Concluída"
+    if (state === "fazendo") return "Em andamento"
+    if (state === "a fazer") return "A fazer"
+    if (state === "rascunho") return "Rascunho"
+    if (state === "lixeira") return "Lixeira"
+    return state
+  }
+
+  const formatDate = date => {
+    if (!date) {
+      return "Sem prazo definido"
+    }
+
+    return new Date(`${date}T00:00:00`).toLocaleDateString(
+      "pt-BR",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="app-layout">
+        <Sidebar />
+
+        <div className="app-main">
+          <Header />
+
+          <main className="task-details-content">
+            <p>Carregando tarefa...</p>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !task) {
+    return (
+      <div className="app-layout">
+        <Sidebar />
+
+        <div className="app-main">
+          <Header />
+
+          <main className="task-details-content">
+            <button
+              type="button"
+              className="back-button"
+              onClick={() => navigate("/dashboard")}
+            >
+              <ArrowLeftIcon />
+              Voltar
+            </button>
+
+            <h1>{error || "Tarefa não encontrada"}</h1>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -89,7 +249,9 @@ function DetalhesTarefa() {
           <div className="task-details-header">
             <div>
               <p className="page-eyebrow">TAREFA</p>
-              <h1>Finalizar documentação do projeto</h1>
+
+              <h1>{task.title}</h1>
+
               <p>Detalhes e informações da tarefa.</p>
             </div>
 
@@ -97,13 +259,19 @@ function DetalhesTarefa() {
               <button
                 type="button"
                 className="task-edit-button"
-                onClick={() => navigate(`/tarefas/${id}/editar`)}
+                onClick={() =>
+                  navigate(`/tarefas/${id}/editar`)
+                }
               >
                 <EditIcon />
                 Editar
               </button>
 
-              <button type="button" className="task-delete-button">
+              <button
+                type="button"
+                className="task-delete-button"
+                onClick={handleDelete}
+              >
                 <TrashIcon />
                 Excluir
               </button>
@@ -114,23 +282,22 @@ function DetalhesTarefa() {
             <div className="task-details-main-card">
               <div className="task-status-row">
                 <span className="task-status-badge">
-                  <span className="task-status-dot"></span>
-                  Em andamento
+                  <span className="task-status-dot" />
+                  {getStateLabel(task.state)}
                 </span>
 
                 <span className="task-priority-badge">
                   <FlagIcon />
-                  Média
+                  {getPriorityLabel(task.priority)}
                 </span>
               </div>
 
               <div className="task-description-section">
                 <h2>Descrição</h2>
+
                 <p>
-                  Finalizar a documentação do projeto integrador e revisar
-                  todas as informações antes da entrega. Verificar se todos
-                  os requisitos foram documentados corretamente e organizar
-                  os arquivos necessários.
+                  {task.description ||
+                    "Nenhuma descrição foi adicionada."}
                 </p>
               </div>
 
@@ -142,7 +309,10 @@ function DetalhesTarefa() {
 
                   <div>
                     <span>Data de entrega</span>
-                    <strong>10 de setembro de 2026</strong>
+
+                    <strong>
+                      {formatDate(task.due_date)}
+                    </strong>
                   </div>
                 </div>
 
@@ -153,7 +323,10 @@ function DetalhesTarefa() {
 
                   <div>
                     <span>Categoria</span>
-                    <strong>Projeto</strong>
+
+                    <strong>
+                      {task.category || "Sem categoria"}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -161,19 +334,44 @@ function DetalhesTarefa() {
               <div className="task-progress-section">
                 <div className="task-progress-header">
                   <span>Progresso</span>
-                  <strong>60%</strong>
+
+                  <strong>
+                    {task.state === "concluído" ? "100%" : "0%"}
+                  </strong>
                 </div>
 
                 <div className="task-progress-bar">
-                  <span></span>
+                  <span
+                    style={{
+                      width:
+                        task.state === "concluído"
+                          ? "100%"
+                          : "0%",
+                    }}
+                  />
                 </div>
               </div>
 
               <div className="task-complete-section">
-                <button type="button" className="complete-task-button">
-                  <CheckIcon />
-                  Marcar como concluída
-                </button>
+                {task.state === "concluído" ? (
+                  <button
+                    type="button"
+                    className="complete-task-button"
+                    disabled
+                  >
+                    <CheckIcon />
+                    Tarefa concluída
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="complete-task-button"
+                    onClick={handleComplete}
+                  >
+                    <CheckIcon />
+                    Marcar como concluída
+                  </button>
+                )}
               </div>
             </div>
 
@@ -182,22 +380,25 @@ function DetalhesTarefa() {
 
               <div className="task-side-item">
                 <span>Criada em</span>
-                <strong>02 de setembro de 2026</strong>
+                <strong>Informação do banco</strong>
               </div>
 
               <div className="task-side-item">
                 <span>Última atualização</span>
-                <strong>03 de setembro de 2026</strong>
+                <strong>Informação do banco</strong>
               </div>
 
               <div className="task-side-item">
                 <span>Status</span>
-                <strong>Em andamento</strong>
+
+                <strong>
+                  {getStateLabel(task.state)}
+                </strong>
               </div>
 
               <div className="task-side-item">
                 <span>ID da tarefa</span>
-                <strong>#{id}</strong>
+                <strong>#{task.id}</strong>
               </div>
             </aside>
           </section>

@@ -1,4 +1,6 @@
-import { NavLink } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { NavLink, useNavigate } from "react-router-dom"
+import { getCurrentUser } from "../services/api"
 
 function HomeIcon() {
   return (
@@ -58,6 +60,43 @@ function LogOutIcon() {
 }
 
 function Sidebar() {
+  const navigate = useNavigate()
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    async function loadUser() {
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token")
+
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      try {
+        const data = await getCurrentUser()
+        setUser(data)
+      } catch {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        navigate("/login")
+      }
+    }
+
+    loadUser()
+  }, [navigate])
+
+  function handleLogout() {
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("token")
+    navigate("/login")
+  }
+
+  const username = user?.username || "Usuário"
+  const email = user?.email || ""
+  const initial = username.charAt(0).toUpperCase()
+
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
@@ -67,7 +106,11 @@ function Sidebar() {
           className="sidebar-logo"
         />
 
-        <button className="sidebar-new-task">
+        <button
+          type="button"
+          className="sidebar-new-task"
+          onClick={() => navigate("/tarefas/nova")}
+        >
           <PlusIcon />
           <span>Nova tarefa</span>
         </button>
@@ -86,7 +129,7 @@ function Sidebar() {
           </NavLink>
 
           <NavLink
-            to="/tarefas/nova"
+            to="/tarefas"
             className={({ isActive }) =>
               `sidebar-link ${isActive ? "active" : ""}`
             }
@@ -124,16 +167,20 @@ function Sidebar() {
       <div className="sidebar-bottom">
         <div className="sidebar-user">
           <div className="sidebar-avatar">
-            H
+            {initial}
           </div>
 
           <div className="sidebar-user-info">
-            <strong>Hugo</strong>
-            <span>hugo@email.com</span>
+            <strong>{username}</strong>
+            <span>{email}</span>
           </div>
         </div>
 
-        <button className="sidebar-logout">
+        <button
+          type="button"
+          className="sidebar-logout"
+          onClick={handleLogout}
+        >
           <LogOutIcon />
           <span>Sair</span>
         </button>

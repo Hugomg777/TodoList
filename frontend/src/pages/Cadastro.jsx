@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { createUser } from "../services/api"
 
 function UserIcon() {
   return (
@@ -55,8 +56,53 @@ function ArrowIcon() {
 
 function Cadastro() {
   const navigate = useNavigate()
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [terms, setTerms] = useState(false)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleRegister(event) {
+    event.preventDefault()
+    setError("")
+
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.")
+      return
+    }
+
+    if (!terms) {
+      setError("Você precisa concordar com os Termos de Uso e a Política de Privacidade.")
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      await createUser({
+        username: name,
+        email,
+        password
+      })
+
+      navigate("/login")
+    } catch (error) {
+      if (error.message === "Username já está em uso") {
+        setError("Este usuário já está em uso.")
+      } else if (error.message === "Email já está em uso") {
+        setError("Este e-mail já está cadastrado.")
+      } else {
+        setError(error.message || "Não foi possível criar sua conta.")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <main className="register-page">
@@ -68,16 +114,20 @@ function Cadastro() {
           <p>Comece a organizar suas tarefas de forma simples e eficiente.</p>
         </header>
 
-        <form className="register-form">
+        <form className="register-form" onSubmit={handleRegister}>
           <div className="register-group">
             <label htmlFor="name">Nome completo</label>
 
             <div className="register-input-wrapper">
               <UserIcon />
+
               <input
                 id="name"
                 type="text"
                 placeholder="Seu nome"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
               />
             </div>
           </div>
@@ -87,10 +137,14 @@ function Cadastro() {
 
             <div className="register-input-wrapper">
               <MailIcon />
+
               <input
                 id="register-email"
                 type="email"
                 placeholder="seu@email.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
               />
             </div>
           </div>
@@ -105,6 +159,9 @@ function Cadastro() {
                 id="register-password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Crie uma senha"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
               />
 
               <button
@@ -127,6 +184,9 @@ function Cadastro() {
                 id="confirm-password"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Repita sua senha"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                required
               />
 
               <button
@@ -139,16 +199,31 @@ function Cadastro() {
             </div>
           </div>
 
+          {error && (
+            <p className="register-error">
+              {error}
+            </p>
+          )}
+
           <label className="register-terms">
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={terms}
+              onChange={(event) => setTerms(event.target.checked)}
+            />
+
             <span>
               Concordo com os <button type="button">Termos de Uso</button> e a{" "}
               <button type="button">Política de Privacidade</button>.
             </span>
           </label>
 
-          <button type="submit" className="register-button">
-            Criar minha conta
+          <button
+            type="submit"
+            className="register-button"
+            disabled={loading}
+          >
+            {loading ? "Criando conta..." : "Criar minha conta"}
             <ArrowIcon />
           </button>
         </form>
@@ -162,7 +237,10 @@ function Cadastro() {
         <div className="already-account">
           <p>Já possui uma conta?</p>
 
-          <button type="button" onClick={() => navigate("/login")}>
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+          >
             Entrar na conta
           </button>
         </div>

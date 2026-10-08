@@ -1,4 +1,6 @@
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+import { getCurrentUser } from "../services/api"
 
 function SearchIcon() {
   return (
@@ -28,20 +30,81 @@ function ChevronDownIcon() {
 
 function Header() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [user, setUser] = useState(null)
+  const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    setSearch(params.get("busca") || "")
+  }, [location.search])
+
+  useEffect(() => {
+    async function loadUser() {
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token")
+
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      try {
+        const data = await getCurrentUser()
+        setUser(data)
+      } catch {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        navigate("/login")
+      }
+    }
+
+    loadUser()
+  }, [navigate])
+
+  function handleSearch(event) {
+    event.preventDefault()
+
+    const value = search.trim()
+
+    if (!value) {
+      navigate("/tarefas")
+      return
+    }
+
+    navigate(`/tarefas?busca=${encodeURIComponent(value)}`)
+  }
+
+  const username = user?.username || "Usuário"
+  const initial = username.charAt(0).toUpperCase()
 
   return (
     <header className="header">
-      <div className="header-search">
+      <form className="header-search" onSubmit={handleSearch}>
         <SearchIcon />
+
         <input
           type="text"
           placeholder="Buscar tarefas..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
         />
-        <span className="header-shortcut">⌘ K</span>
-      </div>
+
+        <button
+          type="submit"
+          className="header-shortcut"
+          aria-label="Buscar tarefas"
+        >
+          ⌘ K
+        </button>
+      </form>
 
       <div className="header-actions">
-        <button className="header-notifications" type="button">
+        <button
+          className="header-notifications"
+          type="button"
+        >
           <BellIcon />
           <span className="notification-dot"></span>
         </button>
@@ -54,11 +117,11 @@ function Header() {
           onClick={() => navigate("/configuracoes")}
         >
           <div className="header-avatar">
-            U
+            {initial}
           </div>
 
           <div className="header-user-info">
-            <strong>Usuário</strong>
+            <strong>{username}</strong>
             <span>Minha conta</span>
           </div>
 

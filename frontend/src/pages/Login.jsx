@@ -1,125 +1,133 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-
-function MailIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="10" width="14" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  )
-}
-
-function EyeIcon({ hidden }) {
-  return hidden ? (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m3 3 18 18" />
-      <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
-      <path d="M9.9 4.2A10.5 10.5 0 0 1 12 4c5 0 8.7 4.1 9.8 6a11.5 11.5 0 0 1-3.2 3.7" />
-      <path d="M6.6 6.6C4.1 8.1 2.7 10.3 2.2 12c.9 2.1 3.7 5.3 8 6.1" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.2 12s3.5-6 9.8-6 9.8 6 9.8 6-3.5 6-9.8 6-9.8-6-9.8-6Z" />
-      <circle cx="12" cy="12" r="2.5" />
-    </svg>
-  )
-}
+import { useNavigate, Link } from "react-router-dom"
+import { login } from "../services/api"
 
 function Login() {
   const navigate = useNavigate()
-  const [showPassword, setShowPassword] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleLogin(event) {
+    event.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      const data = await login(username, password)
+      localStorage.setItem("access_token", data.access_token)
+      navigate("/dashboard")
+    } catch (error) {
+      setError(error.message || "Não foi possível entrar.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <main className="login-page">
-      <section className="login-card">
-        <img className="login-logo" src="/nexo-logo.png" alt="NEXO" />
+    <div className="login-page">
+      <div className="login-container">
+        <img
+          className="login-logo"
+          src="/nexo-logo.png"
+          alt="NEXO"
+        />
 
-        <div className="login-header">
-          <h1>Bem-vindo de volta!</h1>
-          <p>Entre na sua conta para continuar organizando suas tarefas.</p>
-        </div>
-
-        <form className="login-form">
-          <div className="login-group">
-            <label htmlFor="email">E-mail</label>
-
-            <div className="login-input-wrapper">
-              <MailIcon />
-
-              <input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-              />
-            </div>
+        <div className="login-card">
+          <div className="login-header">
+            <h1>Bem-vindo de volta</h1>
+            <p>Entre na sua conta para continuar.</p>
           </div>
 
-          <div className="login-group">
-            <label htmlFor="password">Senha</label>
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="login-group">
+              <label htmlFor="username">Usuário ou e-mail</label>
 
-            <div className="login-input-wrapper">
-              <LockIcon />
+              <div className="login-input-wrapper">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 21a8 8 0 0 0-16 0" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
 
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-              />
-
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                <EyeIcon hidden={!showPassword} />
-              </button>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="Digite seu usuário ou e-mail"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="login-options">
-            <label>
-              <input type="checkbox" />
-              <span>Lembrar de mim</span>
-            </label>
+            <div className="login-group">
+              <label htmlFor="password">Senha</label>
 
-            <button type="button">
-              Esqueceu a senha?
+              <div className="login-input-wrapper">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect
+                    width="18"
+                    height="11"
+                    x="3"
+                    y="11"
+                    rx="2"
+                    ry="2"
+                  />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Digite sua senha"
+                  required
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="login-error">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={loading}
+            >
+              {loading ? "Entrando..." : "Entrar"}
             </button>
+          </form>
+
+          <div className="login-footer">
+            <span>Não possui uma conta?</span>
+            <Link to="/cadastro">Criar conta</Link>
           </div>
-
-          <button type="submit" className="login-button">
-            Entrar
-          </button>
-        </form>
-
-        <div className="login-divider">
-          <span></span>
-          <p>ou</p>
-          <span></span>
         </div>
-
-        <div className="login-register">
-          <p>Ainda não tem uma conta?</p>
-
-          <button
-            type="button"
-            onClick={() => navigate("/cadastro")}
-          >
-            Criar conta
-          </button>
-        </div>
-      </section>
-    </main>
+      </div>
+    </div>
   )
 }
 

@@ -3,10 +3,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from database import get_session
-from models import Todo, User
-from schemas import TodoCreate, TodoUpdate, TodoPublic
-from security import get_current_user
+from backend.database import get_session
+from backend.models.models import Todo, User
+from backend.schemas.schemas import TodoCreate, TodoUpdate, TodoPublic
+from backend.security import get_current_user
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -23,11 +23,13 @@ async def create_todo(
         title=todo.title,
         description=todo.description,
         state=todo.state,
+        priority=todo.priority,
+        category=todo.category,
+        due_date=todo.due_date,
         user_id=user.id
     )
 
     session.add(db_todo)
-
     await session.commit()
     await session.refresh(db_todo)
 
@@ -40,12 +42,36 @@ async def list_todos(
     user: User = Depends(get_current_user)
 ):
     result = await session.execute(
+        select(Todo)
+        .where(Todo.user_id == user.id)
+        .order_by(Todo.id.desc())
+    )
+
+    return result.scalars().all()
+
+
+@router.get("/{todo_id}", response_model=TodoPublic)
+async def get_todo(
+    todo_id: int,
+    session: Session,
+    user: User = Depends(get_current_user)
+):
+    result = await session.execute(
         select(Todo).where(
+            Todo.id == todo_id,
             Todo.user_id == user.id
         )
     )
 
-    return result.scalars().all()
+    db_todo = result.scalar_one_or_none()
+
+    if not db_todo:
+        raise HTTPException(
+            status_code=404,
+            detail="Todo não encontrado"
+        )
+
+    return db_todo
 
 
 @router.patch("/{todo_id}", response_model=TodoPublic)

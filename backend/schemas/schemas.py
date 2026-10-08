@@ -1,7 +1,8 @@
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from models import TodoState
-
+from backend.models.models import TodoState, TodoPriority
 
 
 class Token(BaseModel):
@@ -9,11 +10,13 @@ class Token(BaseModel):
     token_type: str
 
 
-
 class TodoBase(BaseModel):
     title: str
     description: str | None = None
     state: TodoState | None = None
+    priority: TodoPriority | None = None
+    category: str | None = None
+    due_date: date | None = None
 
 
 class TodoCreate(TodoBase):
@@ -24,6 +27,9 @@ class TodoUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     state: TodoState | None = None
+    priority: TodoPriority | None = None
+    category: str | None = None
+    due_date: date | None = None
 
 
 class TodoPublic(TodoBase):
@@ -35,7 +41,6 @@ class TodoPublic(TodoBase):
 class FilterPage(BaseModel):
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=10, ge=0)
-
 
 
 class UserCreate(BaseModel):
