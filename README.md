@@ -129,15 +129,13 @@ http://localhost:5173
 Abra esse endereço no navegador. Crie uma conta pela tela de cadastro ou entre com uma conta já registrada.
 
 
-```
-
 O backend concentra as rotas, regras de negócio, modelos e acesso ao banco de dados. O frontend contém as páginas, os componentes de interface e o módulo de serviços responsável pelas requisições à API.
 
 ## Documentação técnica
 
 A documentação técnica do NEXO apresenta a arquitetura do sistema, suas funcionalidades, a organização do backend e frontend, as rotas da API, o banco de dados, os procedimentos de execução e os testes realizados.
 
-[📄 Acessar a documentação técnica do NEXO](./DocumentacaoTec_NEXOcorrigido.docx)
+📄 **[Abrir a documentação técnica do NEXO](./DocumentacaoTec_NEXOcorrigido.docx)**
 
 ## Observações
 
