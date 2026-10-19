@@ -73,7 +73,9 @@ function DetalhesTarefa() {
 
   const [task, setTask] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState("")
+  const [actionError, setActionError] = useState("")
 
   useEffect(() => {
     async function loadTask() {
@@ -109,13 +111,19 @@ function DetalhesTarefa() {
   }, [id, navigate])
 
   async function handleComplete() {
-    if (!task) {
+    if (!task || actionLoading) {
       return
     }
 
+    setActionLoading(true)
+    setActionError("")
+
+    const newState =
+      task.state === "concluído" ? "a fazer" : "concluído"
+
     try {
       const updatedTask = await updateTodo(id, {
-        state: "concluído",
+        state: newState,
       })
 
       setTask(updatedTask)
@@ -124,7 +132,14 @@ function DetalhesTarefa() {
         localStorage.removeItem("access_token")
         localStorage.removeItem("token")
         navigate("/login")
+        return
       }
+
+      setActionError(
+        err.message || "Não foi possível atualizar a tarefa."
+      )
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -158,13 +173,13 @@ function DetalhesTarefa() {
     }
   }
 
-  const getPriorityLabel = priority => {
+  const getPriorityLabel = (priority) => {
     if (priority === "alta") return "Alta"
     if (priority === "media") return "Média"
     return "Baixa"
   }
 
-  const getStateLabel = state => {
+  const getStateLabel = (state) => {
     if (state === "concluído") return "Concluída"
     if (state === "fazendo") return "Em andamento"
     if (state === "a fazer") return "A fazer"
@@ -173,7 +188,7 @@ function DetalhesTarefa() {
     return state
   }
 
-  const formatDate = date => {
+  const formatDate = (date) => {
     if (!date) {
       return "Sem prazo definido"
     }
@@ -192,10 +207,8 @@ function DetalhesTarefa() {
     return (
       <div className="app-layout">
         <Sidebar />
-
         <div className="app-main">
           <Header />
-
           <main className="task-details-content">
             <p>Carregando tarefa...</p>
           </main>
@@ -208,10 +221,8 @@ function DetalhesTarefa() {
     return (
       <div className="app-layout">
         <Sidebar />
-
         <div className="app-main">
           <Header />
-
           <main className="task-details-content">
             <button
               type="button"
@@ -228,6 +239,8 @@ function DetalhesTarefa() {
       </div>
     )
   }
+
+  const isCompleted = task.state === "concluído"
 
   return (
     <div className="app-layout">
@@ -249,9 +262,7 @@ function DetalhesTarefa() {
           <div className="task-details-header">
             <div>
               <p className="page-eyebrow">TAREFA</p>
-
               <h1>{task.title}</h1>
-
               <p>Detalhes e informações da tarefa.</p>
             </div>
 
@@ -336,42 +347,40 @@ function DetalhesTarefa() {
                   <span>Progresso</span>
 
                   <strong>
-                    {task.state === "concluído" ? "100%" : "0%"}
+                    {isCompleted ? "100%" : "0%"}
                   </strong>
                 </div>
 
                 <div className="task-progress-bar">
                   <span
                     style={{
-                      width:
-                        task.state === "concluído"
-                          ? "100%"
-                          : "0%",
+                      width: isCompleted ? "100%" : "0%",
                     }}
                   />
                 </div>
               </div>
 
+              {actionError && (
+                <div className="task-action-error">
+                  {actionError}
+                </div>
+              )}
+
               <div className="task-complete-section">
-                {task.state === "concluído" ? (
-                  <button
-                    type="button"
-                    className="complete-task-button"
-                    disabled
-                  >
-                    <CheckIcon />
-                    Tarefa concluída
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="complete-task-button"
-                    onClick={handleComplete}
-                  >
-                    <CheckIcon />
-                    Marcar como concluída
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="complete-task-button"
+                  onClick={handleComplete}
+                  disabled={actionLoading}
+                >
+                  <CheckIcon />
+
+                  {actionLoading
+                    ? "Atualizando..."
+                    : isCompleted
+                      ? "Reabrir tarefa"
+                      : "Marcar como concluída"}
+                </button>
               </div>
             </div>
 

@@ -83,17 +83,17 @@ function Dashboard() {
   }, [navigate])
 
   const completedTasks = tasks.filter(
-    task => task.state === "concluído"
+    (task) => task.state === "concluído"
   )
 
   const doingTasks = tasks.filter(
-    task => task.state === "fazendo"
+    (task) => task.state === "fazendo"
   )
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const overdueTasks = tasks.filter(task => {
+  const overdueTasks = tasks.filter((task) => {
     if (!task.due_date || task.state === "concluído") {
       return false
     }
@@ -102,7 +102,7 @@ function Dashboard() {
     return dueDate < today
   })
 
-  const todayTasks = tasks.filter(task => {
+  const todayTasks = tasks.filter((task) => {
     if (!task.due_date) {
       return false
     }
@@ -111,19 +111,19 @@ function Dashboard() {
     return dueDate.getTime() === today.getTime()
   })
 
-  const getPriorityLabel = priority => {
+  const getPriorityLabel = (priority) => {
     if (priority === "alta") return "Alta"
     if (priority === "media") return "Média"
     return "Baixa"
   }
 
-  const getPriorityClass = priority => {
+  const getPriorityClass = (priority) => {
     if (priority === "alta") return "priority-high"
     if (priority === "media") return "priority-medium"
     return "priority-low"
   }
 
-  const formatDate = date => {
+  const formatDate = (date) => {
     if (!date) {
       return "Sem prazo"
     }
@@ -236,18 +236,62 @@ function Dashboard() {
 
             <div className="dashboard-task-list">
               {recentTasks.length === 0 ? (
-                <div className="dashboard-empty">
-                  <p>Você ainda não possui tarefas.</p>
+                <div
+                  className="dashboard-empty"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    justifyContent: "center",
+                    padding: "28px 24px",
+                    gap: "14px",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "15px",
+                      color: "#64748b",
+                    }}
+                  >
+                    Você ainda não possui tarefas.
+                  </p>
 
                   <button
                     type="button"
                     onClick={() => navigate("/tarefas/nova")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      width: "auto",
+                      minWidth: "160px",
+                      height: "42px",
+                      padding: "0 18px",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "10px",
+                      background: "#ffffff",
+                      color: "#6d3df5",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
                   >
-                    Criar primeira tarefa
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        width: "17px",
+                        height: "17px",
+                      }}
+                    >
+                      <PlusIcon />
+                    </span>
+                    Criar tarefa
                   </button>
                 </div>
               ) : (
-                recentTasks.map(task => (
+                recentTasks.map((task) => (
                   <article
                     className="dashboard-task"
                     key={task.id}
@@ -258,9 +302,7 @@ function Dashboard() {
                         task.state === "concluído" ? "completed" : ""
                       }`}
                     >
-                      {task.state === "concluído" && (
-                        <CheckIcon />
-                      )}
+                      {task.state === "concluído" && <CheckIcon />}
                     </div>
 
                     <div
@@ -271,6 +313,7 @@ function Dashboard() {
                       }`}
                     >
                       <h3>{task.title}</h3>
+
                       <span>
                         {task.category || "Sem categoria"}
                       </span>
@@ -314,37 +357,37 @@ function Dashboard() {
 
               <div className="productivity-chart">
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "45%" }}></div>
+                  <div className="chart-bar" style={{ height: "45%" }} />
                   <span>Seg</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "65%" }}></div>
+                  <div className="chart-bar" style={{ height: "65%" }} />
                   <span>Ter</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "52%" }}></div>
+                  <div className="chart-bar" style={{ height: "52%" }} />
                   <span>Qua</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "80%" }}></div>
+                  <div className="chart-bar" style={{ height: "80%" }} />
                   <span>Qui</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "68%" }}></div>
+                  <div className="chart-bar" style={{ height: "68%" }} />
                   <span>Sex</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "35%" }}></div>
+                  <div className="chart-bar" style={{ height: "35%" }} />
                   <span>Sáb</span>
                 </div>
 
                 <div className="chart-day">
-                  <div className="chart-bar" style={{ height: "25%" }}></div>
+                  <div className="chart-bar" style={{ height: "25%" }} />
                   <span>Dom</span>
                 </div>
               </div>
@@ -380,7 +423,7 @@ function Dashboard() {
                         todayTasks.length > 0
                           ? `${
                               (todayTasks.filter(
-                                task =>
+                                (task) =>
                                   task.state === "concluído"
                               ).length /
                                 todayTasks.length) *
@@ -388,14 +431,14 @@ function Dashboard() {
                             }%`
                           : "0%",
                     }}
-                  ></span>
+                  />
                 </div>
 
                 <div className="today-progress-info">
                   <span>
                     {
                       todayTasks.filter(
-                        task => task.state === "concluído"
+                        (task) => task.state === "concluído"
                       ).length
                     }{" "}
                     de {todayTasks.length} concluídas
@@ -405,7 +448,8 @@ function Dashboard() {
                     {todayTasks.length > 0
                       ? `${Math.round(
                           (todayTasks.filter(
-                            task => task.state === "concluído"
+                            (task) =>
+                              task.state === "concluído"
                           ).length /
                             todayTasks.length) *
                             100

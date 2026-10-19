@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useLayoutEffect } from "react"
 import { createPortal } from "react-dom"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import Sidebar from "../components/Sidebar"
 import Header from "../components/Header"
-import { getTodos } from "../services/api"
+import { getTodos, updateTodo, deleteTodo } from "../services/api"
 
 function PlusIcon() {
   return (
@@ -18,7 +18,19 @@ function EditIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-8 1 1-4Z" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v5" />
+      <path d="M14 11v5" />
     </svg>
   )
 }
@@ -48,7 +60,6 @@ function FilterDropdown({
 
     const rect = triggerRef.current.getBoundingClientRect()
     const width = Math.max(rect.width, 150)
-
     const left = Math.min(
       rect.left,
       window.innerWidth - width - 12
@@ -156,6 +167,7 @@ function FilterDropdown({
 
 function MinhasTarefas() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -163,6 +175,9 @@ function MinhasTarefas() {
   const [statusFilter, setStatusFilter] = useState("todos")
   const [priorityFilter, setPriorityFilter] = useState("todas")
   const [openFilter, setOpenFilter] = useState(null)
+
+  const searchParams = new URLSearchParams(location.search)
+  const searchTerm = (searchParams.get("busca") || "").trim().toLowerCase()
 
   useEffect(() => {
     async function loadTasks() {
@@ -179,10 +194,7 @@ function MinhasTarefas() {
         const data = await getTodos()
         setTasks(data)
       } catch (err) {
-        if (err.message === "Could not validate credentials") {
-          localStorage.removeItem("access_token")
-          localStorage.removeItem("token")
-          navigate("/login")
+        if (err.message === "Sessão expirada.") {
           return
         }
 
@@ -195,6 +207,46 @@ function MinhasTarefas() {
     loadTasks()
   }, [navigate])
 
+  async function handleComplete(task) {
+    if (task.state === "concluído") {
+      return
+    }
+
+    try {
+      const updatedTask = await updateTodo(task.id, {
+        state: "concluído",
+      })
+
+      setTasks(currentTasks =>
+        currentTasks.map(currentTask =>
+          currentTask.id === task.id ? updatedTask : currentTask
+        )
+      )
+    } catch (err) {
+      setError(err.message || "Erro ao concluir a tarefa.")
+    }
+  }
+
+  async function handleDelete(task) {
+    const confirmed = window.confirm(
+      `Deseja excluir a tarefa "${task.title}"?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      await deleteTodo(task.id)
+
+      setTasks(currentTasks =>
+        currentTasks.filter(currentTask => currentTask.id !== task.id)
+      )
+    } catch (err) {
+      setError(err.message || "Erro ao excluir a tarefa.")
+    }
+  }
+
   const filteredTasks = tasks.filter(task => {
     const matchesStatus =
       statusFilter === "todos" || task.state === statusFilter
@@ -202,7 +254,19 @@ function MinhasTarefas() {
     const matchesPriority =
       priorityFilter === "todas" || task.priority === priorityFilter
 
-    return matchesStatus && matchesPriority
+    const searchableText = [
+      task.title,
+      task.category,
+      task.description,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+
+    const matchesSearch =
+      !searchTerm || searchableText.includes(searchTerm)
+
+    return matchesStatus && matchesPriority && matchesSearch
   })
 
   const statusOptions = [
@@ -345,12 +409,14 @@ function MinhasTarefas() {
             {!loading && !error && filteredTasks.length === 0 && (
               <div className="dashboard-empty">
                 <p>
-                  {tasks.length === 0
-                    ? "Você ainda não possui tarefas."
-                    : "Nenhuma tarefa corresponde aos filtros selecionados."}
+                  {searchTerm
+                    ? `Nenhuma tarefa encontrada para "${searchTerm}".`
+                    : tasks.length === 0
+                      ? "Você ainda não possui tarefas."
+                      : "Nenhuma tarefa corresponde aos filtros selecionados."}
                 </p>
 
-                {tasks.length === 0 && (
+                {tasks.length === 0 && !searchTerm && (
                   <button
                     type="button"
                     onClick={() => navigate("/tarefas/nova")}
@@ -369,13 +435,20 @@ function MinhasTarefas() {
                     key={task.id}
                     onClick={() => navigate(`/tarefas/${task.id}`)}
                   >
-                    <div
+                    <button
+                      type="button"
                       className={`dashboard-task-check ${
                         task.state === "concluído" ? "completed" : ""
                       }`}
+                      onClick={event => {
+                        event.stopPropagation()
+                        handleComplete(task)
+                      }}
+                      disabled={task.state === "concluído"}
+                      aria-label={`Concluir ${task.title}`}
                     >
                       {task.state === "concluído" && "✓"}
-                    </div>
+                    </button>
 
                     <div
                       className={`dashboard-task-info ${
@@ -409,17 +482,31 @@ function MinhasTarefas() {
                       {getStatusLabel(task.state)}
                     </span>
 
-                    <button
-                      type="button"
-                      className="task-edit-button"
-                      onClick={event => {
-                        event.stopPropagation()
-                        navigate(`/tarefas/${task.id}/editar`)
-                      }}
-                      aria-label={`Editar ${task.title}`}
-                    >
-                      <EditIcon />
-                    </button>
+                    <div className="tasks-list-actions">
+                      <button
+                        type="button"
+                        className="tasks-list-edit-button"
+                        onClick={event => {
+                          event.stopPropagation()
+                          navigate(`/tarefas/${task.id}/editar`)
+                        }}
+                        aria-label={`Editar ${task.title}`}
+                      >
+                        <EditIcon />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="tasks-list-delete-button"
+                        onClick={event => {
+                          event.stopPropagation()
+                          handleDelete(task)
+                        }}
+                        aria-label={`Excluir ${task.title}`}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>

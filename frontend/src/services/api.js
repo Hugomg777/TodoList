@@ -14,6 +14,13 @@ async function request(endpoint, options = {}) {
 
   const data = await response.json()
 
+  if (response.status === 401) {
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("token")
+    window.location.href = "/login"
+    throw new Error("Sessão expirada.")
+  }
+
   if (!response.ok) {
     throw new Error(data.detail || "Erro na requisição.")
   }
